@@ -111,17 +111,23 @@ Yesterday's run (if any):
 Keep it to 2-4 sentences. Include the key workout details. Be encouraging but concise."""
 
 
-ASSESSMENT_PROMPT = """Based on the fitness assessment data just collected, provide:
-1. Estimated current fitness level summary
-2. Estimated pace zones (Easy, Tempo, Interval, Long Run) based on their race times
-3. Recommended initial weekly mileage
-4. Any cautions based on injury history or age
-5. A brief motivational welcome message
+ASSESSMENT_PROMPT = """Based on the athlete's self-reported info AND their actual Strava data, provide:
+1. Estimated current fitness level summary (use the Strava data to ground this in reality)
+2. Estimated pace zones (Easy, Tempo, Interval, Long Run) based on their actual paces and HR data
+3. Estimated max HR and threshold pace from the Strava data
+4. Average weekly mileage and frequency (calculated from Strava)
+5. Trends: are they improving, plateauing, or declining? Any concerning patterns?
+6. Any cautions based on injury history, age, or training patterns
+7. A brief motivational welcome message
 
-Assessment data:
+Athlete's self-reported info:
 {assessment_data}
 
-Keep it under 300 words. Be specific with pace recommendations (min:sec/km)."""
+Strava data (last 20 runs):
+{strava_data}
+
+Keep it under 400 words. Be specific with pace recommendations (min:sec/km).
+Use the actual Strava data to derive pace zones rather than relying solely on self-reported info."""
 
 
 OBJECTIVE_PROMPT = """The athlete has just set a new training objective:

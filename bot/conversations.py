@@ -9,11 +9,7 @@ class AssessmentState(IntEnum):
     AGE = auto()
     GENDER = auto()
     EXPERIENCE = auto()
-    WEEKLY_MILEAGE = auto()
-    RECENT_RACE = auto()
     INJURY = auto()
-    MAX_HR = auto()
-    REST_HR = auto()
     PREFERRED_DAYS = auto()
     CONFIRM = auto()
 
