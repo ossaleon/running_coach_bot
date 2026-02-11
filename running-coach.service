@@ -1,0 +1,18 @@
+[Unit]
+Description=AI Running Coach Telegram Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=oss
+WorkingDirectory=/home/oss/Desktop/running bot
+ExecStart=/home/oss/Desktop/running bot/venv/bin/python main.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+EnvironmentFile=/home/oss/Desktop/running bot/.env
+
+[Install]
+WantedBy=multi-user.target
