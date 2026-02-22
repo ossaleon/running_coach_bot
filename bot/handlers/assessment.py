@@ -196,11 +196,9 @@ async def _show_summary(query, context: ContextTypes.DEFAULT_TYPE) -> int:
         "I'll also pull your last 20 runs from Strava.\n"
         "Does this look correct?"
     )
-    await query.edit_message_text(
-        summary,
-        parse_mode="Markdown",
-        reply_markup=confirm_keyboard(),
-    )
+    from bot.utils import edit_markdown
+
+    await edit_markdown(query, summary, reply_markup=confirm_keyboard())
     return AssessmentState.CONFIRM
 
 

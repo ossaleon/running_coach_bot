@@ -94,11 +94,9 @@ async def date_received(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         f"Date: {data['date']}\n\n"
         "Does this look correct?"
     )
-    await update.message.reply_text(
-        summary,
-        parse_mode="Markdown",
-        reply_markup=confirm_keyboard(),
-    )
+    from bot.utils import reply_markdown
+
+    await reply_markdown(update.message, summary, reply_markup=confirm_keyboard())
     return ObjectiveState.CONFIRM
 
 

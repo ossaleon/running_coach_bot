@@ -30,11 +30,13 @@ async def feedback_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return ConversationHandler.END
 
     context.user_data["feedback_activity_id"] = last_activity.strava_activity_id
-    await update.message.reply_text(
+    from bot.utils import reply_markdown
+
+    await reply_markdown(
+        update.message,
         f"Feedback for: *{last_activity.name or 'Run'}* "
         f"({last_activity.distance_km:.1f} km, {last_activity.pace_min_per_km}/km)\n\n"
         "Rate your perceived effort (1-10):",
-        parse_mode="Markdown",
         reply_markup=rpe_keyboard(),
     )
     return FeedbackState.RPE
