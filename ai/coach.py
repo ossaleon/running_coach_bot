@@ -56,13 +56,12 @@ async def get_coaching_response(
         f"USER MESSAGE: {user_message}"
     )
 
-    # Map thinking level from config
-    thinking_level_map = {
-        "HIGH": "HIGH",
-        "LOW": "LOW",
-    }
-    thinking_level = thinking_level_map.get(
-        GEMINI_THINKING_LEVEL.upper(), "HIGH"
+    # Map thinking level from config (NONE disables thinking)
+    thinking_level = GEMINI_THINKING_LEVEL.upper() if GEMINI_THINKING_LEVEL else "NONE"
+    thinking_config = (
+        types.ThinkingConfig(thinking_level=thinking_level)
+        if thinking_level in ("HIGH", "LOW")
+        else None
     )
 
     try:
@@ -76,9 +75,7 @@ async def get_coaching_response(
             ],
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_PROMPT,
-                thinking_config=types.ThinkingConfig(
-                    thinking_level=thinking_level,
-                ),
+                thinking_config=thinking_config,
                 max_output_tokens=GEMINI_MAX_OUTPUT_TOKENS,
                 temperature=GEMINI_TEMPERATURE,
             ),
