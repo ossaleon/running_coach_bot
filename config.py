@@ -15,9 +15,9 @@ STRAVA_VERIFY_TOKEN: str = os.environ["STRAVA_VERIFY_TOKEN"]
 
 # Gemini
 GEMINI_API_KEY: str = os.environ["GEMINI_API_KEY"]
-GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3-pro")
-GEMINI_THINKING_LEVEL: str = os.getenv("GEMINI_THINKING_LEVEL", "HIGH")
-GEMINI_MAX_OUTPUT_TOKENS: int = int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "2048"))
+GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
+GEMINI_THINKING_BUDGET: int = int(os.getenv("GEMINI_THINKING_BUDGET", "-1"))
+GEMINI_MAX_OUTPUT_TOKENS: int = int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "8192"))
 GEMINI_TEMPERATURE: float = float(os.getenv("GEMINI_TEMPERATURE", "0.7"))
 
 # Server

@@ -10,7 +10,7 @@ from config import (
     GEMINI_MAX_OUTPUT_TOKENS,
     GEMINI_MODEL,
     GEMINI_TEMPERATURE,
-    GEMINI_THINKING_LEVEL,
+    GEMINI_THINKING_BUDGET,
     MAX_CONVERSATION_HISTORY,
 )
 from db import database as db
@@ -56,13 +56,9 @@ async def get_coaching_response(
         f"USER MESSAGE: {user_message}"
     )
 
-    # Map thinking level from config (NONE disables thinking)
-    thinking_level = GEMINI_THINKING_LEVEL.upper() if GEMINI_THINKING_LEVEL else "NONE"
-    thinking_config = (
-        types.ThinkingConfig(thinking_level=thinking_level)
-        if thinking_level in ("HIGH", "LOW")
-        else None
-    )
+    # Gemini 2.5 Pro uses thinking_budget (token count), not thinking_level
+    # -1 = dynamic/auto, 128-32768 = explicit budget
+    thinking_config = types.ThinkingConfig(thinking_budget=GEMINI_THINKING_BUDGET)
 
     try:
         response = await client.aio.models.generate_content(
