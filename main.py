@@ -104,6 +104,19 @@ async def general_message_handler(update, context) -> None:
     await reply_markdown(update.message, response)
 
 
+async def error_handler(update, context) -> None:
+    """Global error handler — log the error and notify the user."""
+    logger.error("Unhandled exception:", exc_info=context.error)
+
+    if update and update.effective_message:
+        try:
+            await update.effective_message.reply_text(
+                "Something went wrong. Please try again."
+            )
+        except Exception:
+            pass
+
+
 async def main() -> None:
     # Set database path
     set_db_path(DATABASE_PATH)
@@ -115,6 +128,7 @@ async def main() -> None:
     # Build Telegram bot application
     application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
     register_handlers(application)
+    application.add_error_handler(error_handler)
 
     # Set up aiohttp web server for Strava webhooks and OAuth
     from strava.webhook import (
