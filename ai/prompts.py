@@ -71,7 +71,15 @@ Requirements:
 Target Pace/Effort | Purpose (1 sentence)
 - Include at least 1 rest day
 - Follow the 10% rule for weekly mileage progression
-- Respect the user's preferred training days: {preferred_days}
+- Use the athlete's recent activity data (provided in context) to calibrate starting \
+volume and intensity. If this is the first plan and the athlete has been running \
+consistently, match their current fitness level — do not start from scratch.
+- If no previous plan exists but recent activities show regular training, base weekly \
+mileage on their actual recent average rather than a conservative beginner estimate.
+- The user's preferred training days are: {preferred_days}. Treat these as a guideline, \
+not a strict constraint. If the training objective requires more sessions, schedule \
+additional days for easy runs or supplementary work. Prioritize preferred days for key \
+workouts.
 - Balance easy/hard days appropriately
 - End with a brief "Week Focus" summary (1-2 sentences)
 

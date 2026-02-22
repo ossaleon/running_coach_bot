@@ -1,10 +1,17 @@
 import logging
+import re
 
 from telegram import Message
 from telegram.constants import ParseMode
 from telegram.error import BadRequest
 
 logger = logging.getLogger(__name__)
+
+
+def strip_json_blocks(text: str) -> str:
+    """Remove ```json ... ``` code blocks for cleaner Telegram display."""
+    result = re.sub(r"```json\s*\{.*?\}\s*```", "", text, flags=re.DOTALL)
+    return re.sub(r"\n{3,}", "\n\n", result).strip()
 
 
 async def reply_markdown(message: Message, text: str, **kwargs) -> Message:

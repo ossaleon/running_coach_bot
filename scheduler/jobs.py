@@ -166,7 +166,9 @@ async def weekly_plan_job(context) -> None:
 
         await db.create_weekly_plan(telegram_id, week_start, plan_json, response)
 
-        await send_markdown(context.bot, telegram_id, response)
+        from bot.utils import strip_json_blocks
+
+        await send_markdown(context.bot, telegram_id, strip_json_blocks(response))
     except Exception:
         logger.exception(f"Error in weekly plan generation for user {telegram_id}")
 

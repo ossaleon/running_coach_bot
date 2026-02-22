@@ -58,12 +58,12 @@ async def plan_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     # Check for existing plan
     current_plan = await db.get_active_plan(user.telegram_id)
     if current_plan:
-        from bot.utils import reply_markdown
+        from bot.utils import reply_markdown, strip_json_blocks
 
         await reply_markdown(
             update.message,
             f"*Current plan (week of {current_plan.week_start}):*\n\n"
-            f"{current_plan.plan_text}\n\n"
+            f"{strip_json_blocks(current_plan.plan_text)}\n\n"
             "Send /newplan to generate a fresh plan for next week.",
         )
         return
@@ -130,6 +130,6 @@ async def _generate_plan(telegram_id: int, context: ContextTypes.DEFAULT_TYPE) -
 
     await db.create_weekly_plan(telegram_id, week_start, plan_json, response)
 
-    from bot.utils import send_markdown
+    from bot.utils import send_markdown, strip_json_blocks
 
-    await send_markdown(context.bot, telegram_id, response)
+    await send_markdown(context.bot, telegram_id, strip_json_blocks(response))
