@@ -93,11 +93,9 @@ async def _process_new_activity(
 
         # Send feedback to user
         bot = telegram_app.bot
-        await bot.send_message(
-            chat_id=user.telegram_id,
-            text=ai_feedback,
-            parse_mode="Markdown",
-        )
+        from bot.utils import send_markdown
+
+        await send_markdown(bot, user.telegram_id, ai_feedback)
 
         # Ask for RPE
         from bot.keyboards import rpe_keyboard

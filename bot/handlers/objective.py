@@ -135,11 +135,9 @@ async def confirm_objective(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     )
     response = await get_coaching_response(telegram_id, prompt, "objective")
 
-    await context.bot.send_message(
-        chat_id=telegram_id,
-        text=response,
-        parse_mode="Markdown",
-    )
+    from bot.utils import send_markdown
+
+    await send_markdown(context.bot, telegram_id, response)
     await context.bot.send_message(
         chat_id=telegram_id,
         text="Use /plan to generate your first weekly training plan!",

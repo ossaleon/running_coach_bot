@@ -99,7 +99,9 @@ async def general_message_handler(update, context) -> None:
     response = await get_coaching_response(
         update.effective_user.id, update.message.text, "general"
     )
-    await update.message.reply_text(response, parse_mode="Markdown")
+    from bot.utils import reply_markdown
+
+    await reply_markdown(update.message, response)
 
 
 async def main() -> None:

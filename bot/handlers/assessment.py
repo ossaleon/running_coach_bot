@@ -285,11 +285,9 @@ async def confirm_assessment(update: Update, context: ContextTypes.DEFAULT_TYPE)
     )
     response = await get_coaching_response(telegram_id, prompt, "assessment")
 
-    await context.bot.send_message(
-        chat_id=telegram_id,
-        text=response,
-        parse_mode="Markdown",
-    )
+    from bot.utils import send_markdown
+
+    await send_markdown(context.bot, telegram_id, response)
     await context.bot.send_message(
         chat_id=telegram_id,
         text="Next step: /objective to set your training goal!",

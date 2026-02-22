@@ -128,8 +128,6 @@ async def _generate_plan(telegram_id: int, context: ContextTypes.DEFAULT_TYPE) -
 
     await db.create_weekly_plan(telegram_id, week_start, plan_json, response)
 
-    await context.bot.send_message(
-        chat_id=telegram_id,
-        text=response,
-        parse_mode="Markdown",
-    )
+    from bot.utils import send_markdown
+
+    await send_markdown(context.bot, telegram_id, response)

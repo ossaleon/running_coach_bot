@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from ai.coach import get_coaching_response
+from bot.utils import send_markdown
 from ai.context import (
     compute_compliance,
     extract_todays_session,
@@ -109,11 +110,7 @@ async def daily_reminder_job(context) -> None:
         )
         response = await get_coaching_response(telegram_id, prompt, "daily_reminder")
 
-        await context.bot.send_message(
-            chat_id=telegram_id,
-            text=response,
-            parse_mode="Markdown",
-        )
+        await send_markdown(context.bot, telegram_id, response)
     except Exception:
         logger.exception(f"Error in daily reminder for user {telegram_id}")
 
@@ -169,11 +166,7 @@ async def weekly_plan_job(context) -> None:
 
         await db.create_weekly_plan(telegram_id, week_start, plan_json, response)
 
-        await context.bot.send_message(
-            chat_id=telegram_id,
-            text=response,
-            parse_mode="Markdown",
-        )
+        await send_markdown(context.bot, telegram_id, response)
     except Exception:
         logger.exception(f"Error in weekly plan generation for user {telegram_id}")
 
@@ -209,10 +202,6 @@ async def weekly_review_job(context) -> None:
 
         await db.update_plan_review(plan.id, response, compliance)
 
-        await context.bot.send_message(
-            chat_id=telegram_id,
-            text=response,
-            parse_mode="Markdown",
-        )
+        await send_markdown(context.bot, telegram_id, response)
     except Exception:
         logger.exception(f"Error in weekly review for user {telegram_id}")
