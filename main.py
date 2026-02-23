@@ -151,10 +151,19 @@ async def main() -> None:
     await site.start()
     logger.info(f"Webhook server listening on {WEBHOOK_SERVER_HOST}:{WEBHOOK_SERVER_PORT}")
 
-    # Initialize and start the telegram bot
+    # Initialize and start the telegram bot (retry until network is available)
     await application.initialize()
     await application.start()
-    await application.updater.start_polling(drop_pending_updates=True)
+    for attempt in range(1, 61):
+        try:
+            await application.updater.start_polling(drop_pending_updates=True)
+            break
+        except Exception as e:
+            logger.warning(f"Polling start failed (attempt {attempt}/60): {e}")
+            await asyncio.sleep(10)
+    else:
+        logger.error("Failed to start polling after 60 attempts, exiting")
+        return
     logger.info("Telegram bot started (polling)")
 
     # Restore scheduled jobs for all authorized users
