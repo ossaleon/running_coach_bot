@@ -30,6 +30,8 @@ def format_user_profile(user: User) -> str:
         parts.append(f"Injury history: {user.injury_history}")
     if user.preferred_days:
         parts.append(f"Preferred training days: {user.preferred_days}")
+    if user.assessment_summary:
+        parts.append(f"\nAssessment analysis:\n{user.assessment_summary}")
     return "\n".join(parts) if parts else "No profile data yet."
 
 
@@ -100,7 +102,11 @@ def extract_todays_session(plan: WeeklyPlan) -> dict:
 
 
 def compute_compliance(plan: WeeklyPlan, activities: list[Activity]) -> float:
-    """Compute compliance percentage: completed sessions / planned sessions."""
+    """Compute compliance by matching activities to planned sessions by distance (±20%).
+
+    Day-independent: matches planned sessions to actual activities greedily by
+    closest distance within 20% tolerance. Each activity matches at most one session.
+    """
     if not plan or not plan.plan_json:
         return 0.0
     try:
@@ -109,22 +115,97 @@ def compute_compliance(plan: WeeklyPlan, activities: list[Activity]) -> float:
         planned = [s for s in sessions if s.get("type", "").lower() != "rest"]
         if not planned:
             return 100.0
-        # Match activities to planned sessions by checking if a run exists on that day
+
+        # Build list of planned distances (km)
+        planned_distances = []
+        for s in planned:
+            d = s.get("distance_km", 0)
+            if isinstance(d, (int, float)) and d > 0:
+                planned_distances.append(d)
+            else:
+                planned_distances.append(0)
+
+        # Build list of actual distances
+        actual_distances = [act.distance_km for act in activities if act.distance_km > 0]
+
+        # Greedy match: sort planned by distance descending, match closest actual within 20%
         matched = 0
-        for session in planned:
-            day_name = session.get("day", "")
-            for act in activities:
-                if act.start_date:
-                    try:
-                        act_day = datetime.fromisoformat(act.start_date).strftime("%A")
-                        if act_day.lower() == day_name.lower():
-                            matched += 1
-                            break
-                    except ValueError:
-                        continue
+        remaining_actual = list(actual_distances)
+        for planned_d in sorted(planned_distances, reverse=True):
+            if planned_d == 0:
+                # Session without distance (e.g., strength) — match if any activity exists
+                if remaining_actual:
+                    remaining_actual.pop()
+                    matched += 1
+                continue
+            tolerance = planned_d * 0.2
+            best_idx = None
+            best_diff = float("inf")
+            for i, actual_d in enumerate(remaining_actual):
+                diff = abs(actual_d - planned_d)
+                if diff <= tolerance and diff < best_diff:
+                    best_diff = diff
+                    best_idx = i
+            if best_idx is not None:
+                remaining_actual.pop(best_idx)
+                matched += 1
+
         return (matched / len(planned)) * 100.0
     except (json.JSONDecodeError, KeyError):
         return 0.0
+
+
+def compute_performance_summary(activities: list[Activity]) -> str:
+    """Compute weekly mileage trends, pace trends, and current fitness signals."""
+    if not activities:
+        return ""
+
+    # Group activities by week
+    weeks = {}
+    for act in activities:
+        if not act.start_date or not act.distance_m:
+            continue
+        try:
+            dt = datetime.fromisoformat(act.start_date)
+            # Use ISO week for grouping
+            week_key = dt.strftime("%Y-W%W")
+            if week_key not in weeks:
+                weeks[week_key] = {"distance_km": 0, "runs": 0, "paces": [], "hrs": []}
+            w = weeks[week_key]
+            w["distance_km"] += act.distance_km
+            w["runs"] += 1
+            if act.moving_time_s and act.distance_m > 0:
+                pace_s = act.moving_time_s / (act.distance_m / 1000.0)
+                w["paces"].append(pace_s)
+            if act.avg_heartrate:
+                w["hrs"].append(act.avg_heartrate)
+        except ValueError:
+            continue
+
+    if not weeks:
+        return ""
+
+    # Sort weeks chronologically and take last 4
+    sorted_weeks = sorted(weeks.items())[-4:]
+
+    parts = ["*Performance Trends (last 4 weeks):*"]
+    for week_key, w in sorted_weeks:
+        avg_pace_s = sum(w["paces"]) / len(w["paces"]) if w["paces"] else 0
+        pace_min = int(avg_pace_s // 60)
+        pace_sec = int(avg_pace_s % 60)
+        avg_hr = sum(w["hrs"]) / len(w["hrs"]) if w["hrs"] else 0
+        line = f"  {week_key}: {w['distance_km']:.1f} km over {w['runs']} runs, avg pace {pace_min}:{pace_sec:02d}/km"
+        if avg_hr:
+            line += f", avg HR {avg_hr:.0f}"
+        parts.append(line)
+
+    # Mileage trend
+    volumes = [w["distance_km"] for _, w in sorted_weeks]
+    if len(volumes) >= 2:
+        recent_avg = sum(volumes[-2:]) / 2
+        parts.append(f"Current weekly average: {recent_avg:.1f} km")
+
+    return "\n".join(parts)
 
 
 async def build_context(telegram_id: int, interaction_type: str) -> str:
@@ -161,9 +242,12 @@ async def build_context(telegram_id: int, interaction_type: str) -> str:
                 parts.append(f"\n## Last Week's Activities (Compliance: {compliance:.0f}%)\n{format_activities(week_acts)}")
         elif current_plan:
             parts.append(f"\n## Current Plan\n{format_plan(current_plan)}")
-        recent = await db.get_recent_activities(telegram_id, limit=10)
+        recent = await db.get_recent_activities(telegram_id, limit=20)
         if recent:
-            parts.append(f"\n## Recent Activities\n{format_activities(recent)}")
+            parts.append(f"\n## Recent Activities\n{format_activities(recent[:10])}")
+            perf_summary = compute_performance_summary(recent)
+            if perf_summary:
+                parts.append(f"\n## {perf_summary}")
 
     elif interaction_type == "weekly_review":
         parts.append(f"\n## This Week's Plan\n{format_plan(current_plan)}")

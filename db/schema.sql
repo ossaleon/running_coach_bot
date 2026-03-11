@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS users (
     -- Settings
     reminder_time       TEXT DEFAULT '07:00',
     timezone            TEXT DEFAULT 'Europe/Rome',
+    assessment_summary  TEXT,
     -- State tracking
     assessment_done     INTEGER DEFAULT 0,
     created_at          TEXT DEFAULT (datetime('now'))

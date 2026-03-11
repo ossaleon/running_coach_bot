@@ -22,6 +22,7 @@ class User:
     preferred_days: Optional[str] = None
     max_hr: Optional[int] = None
     rest_hr: Optional[int] = None
+    assessment_summary: Optional[str] = None
     objective_type: Optional[str] = None
     objective_target: Optional[str] = None
     objective_date: Optional[str] = None

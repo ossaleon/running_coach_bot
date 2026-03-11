@@ -73,16 +73,54 @@ Last week's actual activities:
 Feedback and notes from last week:
 {last_week_feedback}
 
+CRITICAL — FITNESS CALIBRATION:
+- You MUST analyze the athlete's recent activity data (paces, distances, HR) in context \
+to determine their CURRENT demonstrated fitness level. Do NOT rely on conservative \
+estimates or generic beginner progressions.
+- Base all paces on what the athlete has ACTUALLY been running recently. If their easy \
+runs are at 5:20/km, prescribe easy runs around that pace — not 6:00/km.
+- If the athlete completed or exceeded last week's plan (ran faster, farther, or more \
+sessions than prescribed), the next plan MUST increase challenge appropriately. \
+Under-prescribing for a capable athlete is as harmful as over-prescribing.
+- The 10% mileage rule is a CEILING for safety, not the default increment. If the \
+athlete's recent volume is well below their demonstrated capacity (e.g., they were \
+already running 40 km/week before starting the plan), ramp up faster to match their \
+actual level.
+- If this is an early plan and the athlete has been running consistently (check recent \
+activities and assessment), skip conservative base-building. Meet them where they are.
+- Use the assessment analysis (pace zones, fitness level) from the athlete profile as a \
+baseline, then adjust upward or downward based on recent performance trends.
+
+SESSION DETAIL RULES — every session MUST have precise, actionable instructions (not \
+explanations). Use the formats below based on session type:
+- *Easy Run*: distance, pace range. E.g., "8 km at 5:30-5:45/km"
+- *Recovery Run*: distance, pace range (slower than easy). E.g., "5 km at 6:00-6:15/km"
+- *Long Run*: distance, pace (or progression splits). E.g., "16 km: first 12 km at \
+5:40/km, last 4 km at 5:15/km"
+- *Tempo / Threshold*: warmup, tempo segment with pace, cooldown. E.g., "Warmup: 2 km \
+at 5:40/km. Tempo: 5 km at 4:45/km. Cooldown: 1.5 km at 5:40/km"
+- *Intervals (track/road)*: warmup, reps x distance at pace, recovery duration and type, \
+cooldown. E.g., "Warmup: 2 km at 5:40/km. 6x800 m at 3:55/km, 90 s jog recovery. \
+Cooldown: 1.5 km at 5:40/km"
+- *Hill Repeats*: warmup, reps x duration/distance, effort level, recovery (jog down), \
+cooldown. E.g., "Warmup: 2 km easy. 8x60 s uphill at hard effort, jog down recovery. \
+Cooldown: 1.5 km easy"
+- *Fartlek*: warmup, structure of fast/easy segments, cooldown. E.g., "Warmup: 2 km \
+easy. 8x(2 min at 4:30/km + 2 min easy). Cooldown: 1.5 km easy"
+- *Progression Run*: total distance, split paces. E.g., "10 km: 4 km at 5:30/km, 3 km \
+at 5:10/km, 3 km at 4:50/km"
+- *Strides*: when to do them, count, distance, recovery. E.g., "After easy run: 6x100 m \
+accelerations, 60 s walk recovery"
+- *Cross-training / Strength*: type and duration. E.g., "40 min cycling or swimming, \
+easy effort"
+- *Rest*: just "Rest day"
+Choose session types appropriate for the athlete's objective, experience, and training \
+phase. Vary stimulus across weeks — do not repeat the same session types every week.
+
 Requirements:
-- Output a structured plan using one line per day: *Day* | Session Type | Distance | \
-Pace/Effort | Purpose. Use *bold* for the day name only. Keep it compact.
+- Output a structured plan with one session per day. For each training day, write the \
+full session instructions following the formats above. Use *bold* for day names.
 - Include at least 1 rest day
-- Follow the 10% rule for weekly mileage progression
-- Use the athlete's recent activity data (provided in context) to calibrate starting \
-volume and intensity. If this is the first plan and the athlete has been running \
-consistently, match their current fitness level — do not start from scratch.
-- If no previous plan exists but recent activities show regular training, base weekly \
-mileage on their actual recent average rather than a conservative beginner estimate.
 - The user's preferred training days are: {preferred_days}. Treat these as a guideline, \
 not a strict constraint. If the training objective requires more sessions, schedule \
 additional days for easy runs or supplementary work. Prioritize preferred days for key \
@@ -92,8 +130,24 @@ workouts.
 
 ALSO output the plan as a JSON block (```json ... ```) with this structure:
 {{"sessions": [{{"day": "Monday", "type": "Easy Run", "distance_km": 8, \
-"pace_target": "5:30-5:45/km", "notes": "Conversational pace, flat route preferred"}}, ...]}}
+"pace_target": "5:30-5:45/km", "details": "8 km at 5:30-5:45/km", \
+"notes": "Conversational pace"}}, ...]}}
+The "details" field MUST contain the full actionable instructions for the session.
 """
+
+
+PLAN_REVISION_PROMPT = """The athlete has reviewed the proposed weekly plan and wants changes.
+
+Previous plan:
+{previous_plan}
+
+Athlete's feedback:
+{feedback}
+
+Generate a REVISED weekly plan that addresses the athlete's feedback. Follow all the \
+same session detail rules, formatting, and JSON output requirements as the original plan. \
+Keep everything the athlete didn't mention unchanged unless the feedback implies broader \
+adjustments."""
 
 
 WEEKLY_REVIEW_PROMPT = """Review the training week that just ended.

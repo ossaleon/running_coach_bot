@@ -123,6 +123,25 @@ async def weekly_plan_job(context) -> None:
         if not user or not user.has_objective:
             return
 
+        # Update weekly_mileage_km from recent actual data
+        recent_acts = await db.get_recent_activities(telegram_id, limit=20)
+        if recent_acts:
+            weeks = {}
+            for act in recent_acts:
+                if not act.start_date or not act.distance_m:
+                    continue
+                try:
+                    act_dt = datetime.fromisoformat(act.start_date)
+                    week_key = act_dt.strftime("%Y-W%W")
+                    weeks[week_key] = weeks.get(week_key, 0) + act.distance_km
+                except ValueError:
+                    continue
+            if weeks:
+                # Use last 3 weeks average for current mileage
+                sorted_vols = [v for _, v in sorted(weeks.items())[-3:]]
+                current_mileage = round(sum(sorted_vols) / len(sorted_vols), 1)
+                await db.update_user_profile(telegram_id, weekly_mileage_km=current_mileage)
+
         # Complete current plan
         await db.complete_current_plan(telegram_id)
 
@@ -155,20 +174,11 @@ async def weekly_plan_job(context) -> None:
 
         response = await get_coaching_response(telegram_id, prompt, "weekly_plan")
 
-        # Extract JSON and store
-        import re
-        match = re.search(r"```json\s*(\{.*?\})\s*```", response, re.DOTALL)
-        plan_json = match.group(1) if match else "{}"
+        # Store as pending for approval (not in DB yet)
+        from bot.handlers.plan import _store_pending_plan, _send_plan_for_approval
 
-        monday = datetime.now()
-        monday = monday - timedelta(days=monday.weekday()) + timedelta(days=7)
-        week_start = monday.strftime("%Y-%m-%d")
-
-        await db.create_weekly_plan(telegram_id, week_start, plan_json, response)
-
-        from bot.utils import strip_json_blocks
-
-        await send_markdown(context.bot, telegram_id, strip_json_blocks(response))
+        _store_pending_plan(context, telegram_id, response)
+        await _send_plan_for_approval(context.bot, telegram_id, response)
     except Exception:
         logger.exception(f"Error in weekly plan generation for user {telegram_id}")
 

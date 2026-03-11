@@ -36,7 +36,7 @@ def register_handlers(application) -> None:
     from bot.handlers.objective import get_objective_handler
     from bot.handlers.feedback import get_feedback_handler, rpe_callback_handler
     from bot.handlers.strava_link import linkstrava_command
-    from bot.handlers.plan import plan_command, newplan_command
+    from bot.handlers.plan import plan_command, newplan_command, plan_approval_callback, plan_feedback_handler
     from bot.handlers.settings import settings_command, settings_callback
     from bot.handlers.help import help_command, status_command
 
@@ -61,6 +61,9 @@ def register_handlers(application) -> None:
     application.add_handler(
         CallbackQueryHandler(rpe_callback_handler, pattern=r"^rpe_")
     )
+    application.add_handler(
+        CallbackQueryHandler(plan_approval_callback, pattern=r"^plan_")
+    )
 
     # General text handler (catch-all for settings text and general messages)
     application.add_handler(
@@ -71,6 +74,13 @@ def register_handlers(application) -> None:
 async def general_message_handler(update, context) -> None:
     """Handle general text messages."""
     from bot.handlers.settings import handle_settings_text
+
+    # Check if this is plan feedback (after rejection)
+    from bot.handlers.plan import plan_feedback_handler
+    telegram_id = update.effective_user.id
+    if context.bot_data.get(f"plan_feedback_pending_{telegram_id}"):
+        await plan_feedback_handler(update, context)
+        return
 
     # Check if this is a settings text input
     if await handle_settings_text(update, context):

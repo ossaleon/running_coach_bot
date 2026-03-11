@@ -32,6 +32,11 @@ async def init_db() -> None:
     db = await _get_db()
     try:
         await db.executescript(schema)
+        # Migrations for existing databases
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN assessment_summary TEXT")
+        except Exception:
+            pass  # Column already exists
         await db.commit()
     finally:
         await db.close()
@@ -58,6 +63,7 @@ def _row_to_user(row: aiosqlite.Row) -> User:
         preferred_days=row["preferred_days"],
         max_hr=row["max_hr"],
         rest_hr=row["rest_hr"],
+        assessment_summary=row["assessment_summary"],
         objective_type=row["objective_type"],
         objective_target=row["objective_target"],
         objective_date=row["objective_date"],
@@ -230,7 +236,7 @@ async def update_user_profile(telegram_id: int, **kwargs) -> None:
     allowed = {
         "age", "gender", "weekly_mileage_km", "recent_race", "injury_history",
         "experience_level", "preferred_days", "max_hr", "rest_hr",
-        "assessment_done", "reminder_time", "timezone",
+        "assessment_summary", "assessment_done", "reminder_time", "timezone",
     }
     filtered = {k: v for k, v in kwargs.items() if k in allowed}
     if not filtered:

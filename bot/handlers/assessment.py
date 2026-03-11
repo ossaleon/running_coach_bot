@@ -283,6 +283,9 @@ async def confirm_assessment(update: Update, context: ContextTypes.DEFAULT_TYPE)
     )
     response = await get_coaching_response(telegram_id, prompt, "assessment")
 
+    # Store the AI assessment so it's available for future plan generation
+    await db.update_user_profile(telegram_id, assessment_summary=response)
+
     from bot.utils import send_markdown
 
     await send_markdown(context.bot, telegram_id, response)

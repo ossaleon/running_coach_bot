@@ -76,6 +76,15 @@ def yes_no_keyboard(prefix: str) -> InlineKeyboardMarkup:
     ])
 
 
+def plan_approval_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("Approve", callback_data="plan_approve"),
+            InlineKeyboardButton("Reject", callback_data="plan_reject"),
+        ]
+    ])
+
+
 def settings_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("Change reminder time", callback_data="settings_reminder")],

@@ -12,7 +12,8 @@ from ai.context import (
     format_activities,
     format_plan,
 )
-from ai.prompts import WEEKLY_PLAN_PROMPT
+from ai.prompts import PLAN_REVISION_PROMPT, WEEKLY_PLAN_PROMPT
+from bot.keyboards import plan_approval_keyboard
 from db import database as db
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,39 @@ def _extract_json_from_response(text: str) -> str:
     if match:
         return match.group(1)
     return "{}"
+
+
+def _store_pending_plan(context: ContextTypes.DEFAULT_TYPE, telegram_id: int, response: str) -> None:
+    """Store a generated plan as pending approval in bot_data."""
+    plan_json = _extract_json_from_response(response)
+    week_start = _this_monday()
+    context.bot_data[f"pending_plan_{telegram_id}"] = {
+        "response": response,
+        "plan_json": plan_json,
+        "week_start": week_start,
+    }
+    # Clear any feedback-pending flag
+    context.bot_data.pop(f"plan_feedback_pending_{telegram_id}", None)
+
+
+async def _send_plan_for_approval(bot, telegram_id: int, response: str) -> None:
+    """Send plan text with approval buttons."""
+    from bot.utils import send_markdown, strip_json_blocks
+
+    clean_text = strip_json_blocks(response)
+    # Split if too long for Telegram (4096 char limit)
+    if len(clean_text) > 3800:
+        await send_markdown(bot, telegram_id, clean_text)
+        await bot.send_message(
+            chat_id=telegram_id,
+            text="Approve this plan or reject it with feedback:",
+            reply_markup=plan_approval_keyboard(),
+        )
+    else:
+        await send_markdown(
+            bot, telegram_id, clean_text,
+            reply_markup=plan_approval_keyboard(),
+        )
 
 
 async def plan_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -87,7 +121,7 @@ async def newplan_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 
 async def _generate_plan(telegram_id: int, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Generate a new weekly plan."""
+    """Generate a new weekly plan and send for approval."""
     user = await db.get_user(telegram_id)
 
     # Complete current plan if exists
@@ -102,7 +136,6 @@ async def _generate_plan(telegram_id: int, context: ContextTypes.DEFAULT_TYPE) -
     if last_plan and last_plan.week_start:
         acts = await db.get_activities_for_week(telegram_id, last_plan.week_start)
         if acts:
-            compliance = compute_compliance(last_plan, acts)
             last_week_activities = format_activities(acts)
             feedback_parts = []
             for a in acts:
@@ -124,12 +157,80 @@ async def _generate_plan(telegram_id: int, context: ContextTypes.DEFAULT_TYPE) -
 
     response = await get_coaching_response(telegram_id, prompt, "weekly_plan")
 
-    # Extract JSON and store
-    plan_json = _extract_json_from_response(response)
-    week_start = _this_monday()
+    # Store as pending (not in DB yet) and send for approval
+    _store_pending_plan(context, telegram_id, response)
+    await _send_plan_for_approval(context.bot, telegram_id, response)
 
-    await db.create_weekly_plan(telegram_id, week_start, plan_json, response)
 
-    from bot.utils import send_markdown, strip_json_blocks
+async def plan_approval_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle plan approval or rejection."""
+    query = update.callback_query
+    await query.answer()
+    telegram_id = update.effective_user.id
+    action = query.data  # "plan_approve" or "plan_reject"
 
-    await send_markdown(context.bot, telegram_id, strip_json_blocks(response))
+    pending_key = f"pending_plan_{telegram_id}"
+    pending = context.bot_data.get(pending_key)
+
+    if not pending:
+        await query.edit_message_text("No pending plan to review. Use /newplan to generate one.")
+        return
+
+    if action == "plan_approve":
+        # Save to DB
+        await db.create_weekly_plan(
+            telegram_id,
+            pending["week_start"],
+            pending["plan_json"],
+            pending["response"],
+        )
+        context.bot_data.pop(pending_key, None)
+        context.bot_data.pop(f"plan_feedback_pending_{telegram_id}", None)
+        await query.edit_message_reply_markup(reply_markup=None)
+        await context.bot.send_message(
+            chat_id=telegram_id,
+            text="Plan approved! Your training week is set. Good luck!",
+        )
+
+    elif action == "plan_reject":
+        # Ask for feedback
+        context.bot_data[f"plan_feedback_pending_{telegram_id}"] = True
+        await query.edit_message_reply_markup(reply_markup=None)
+        await context.bot.send_message(
+            chat_id=telegram_id,
+            text="What would you like changed? Send me your feedback and I'll revise the plan.",
+        )
+
+
+async def plan_feedback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle text feedback after plan rejection. Regenerate plan with feedback."""
+    telegram_id = update.effective_user.id
+    feedback_key = f"plan_feedback_pending_{telegram_id}"
+    pending_key = f"pending_plan_{telegram_id}"
+
+    if not context.bot_data.get(feedback_key):
+        return  # Not waiting for plan feedback, ignore
+
+    pending = context.bot_data.get(pending_key)
+    if not pending:
+        context.bot_data.pop(feedback_key, None)
+        await update.message.reply_text("No pending plan found. Use /newplan to generate one.")
+        return
+
+    feedback = update.message.text.strip()
+    context.bot_data.pop(feedback_key, None)
+
+    await update.message.reply_text("Revising your plan based on your feedback...")
+
+    # Generate revised plan
+    from bot.utils import strip_json_blocks
+
+    prompt = PLAN_REVISION_PROMPT.format(
+        previous_plan=strip_json_blocks(pending["response"]),
+        feedback=feedback,
+    )
+    response = await get_coaching_response(telegram_id, prompt, "weekly_plan")
+
+    # Store revised plan as pending and send for approval
+    _store_pending_plan(context, telegram_id, response)
+    await _send_plan_for_approval(context.bot, telegram_id, response)
